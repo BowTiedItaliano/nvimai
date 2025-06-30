@@ -59,28 +59,24 @@ try:
     start_line = int(replace_range[0]) - 1
     end_line = int(replace_range[1]) - 1
     
-    # Clear the original selection
-    vim.current.buffer[start_line:end_line+1] = [""]
+    # Store the text that comes after the selection to preserve it
+    lines_after = []
+    if end_line + 1 < len(vim.current.buffer):
+        lines_after = vim.current.buffer[end_line + 1:]
     
-    # Position cursor at the start of replacement
-    vim.current.window.cursor = (start_line + 1, 0)
-    current_line = start_line
-    current_col = 0
+    # Clear from start_line to end of buffer
+    vim.current.buffer[start_line:] = ["Streaming response..."]
+    vim.command('redraw')
+    
+    accumulated_response = ""
     
     for chunk in send_to_claude_stream(content, prompt):
-        for char in chunk:
-            if char == '\n':
-                # Create new line
-                vim.current.buffer.append("", current_line)
-                current_line += 1
-                current_col = 0
-                vim.current.window.cursor = (current_line + 1, 0)
-            else:
-                # Add character to current line
-                line_content = vim.current.buffer[current_line]
-                vim.current.buffer[current_line] = line_content[:current_col] + char + line_content[current_col:]
-                current_col += 1
-                vim.current.window.cursor = (current_line + 1, current_col)
+        accumulated_response += chunk
+        response_lines = accumulated_response.split('\n')
+        
+        # Replace the content with response + preserved lines after
+        all_lines = response_lines + lines_after
+        vim.current.buffer[start_line:] = all_lines
         
         vim.command('redraw')
     
