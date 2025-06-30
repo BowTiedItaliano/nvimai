@@ -58,6 +58,7 @@ try:
     
     start_line = int(replace_range[0]) - 1
     end_line = int(replace_range[1]) - 1
+    original_num_lines = end_line - start_line + 1
     
     vim.current.buffer[start_line:end_line+1] = ["Streaming response..."]
     vim.command('redraw')
@@ -67,7 +68,16 @@ try:
     for chunk in send_to_claude_stream(content, prompt):
         accumulated_response += chunk
         lines = accumulated_response.split('\n')
-        vim.current.buffer[start_line:start_line+len(lines)] = lines
+        
+        # Calculate how many lines we need to replace
+        new_num_lines = len(lines)
+        
+        # Replace exactly the range we need, preserving text below
+        vim.current.buffer[start_line:start_line+original_num_lines] = lines
+        
+        # Update original_num_lines for next iteration
+        original_num_lines = new_num_lines
+        
         vim.command('redraw')
     
     print("Code updated successfully")
